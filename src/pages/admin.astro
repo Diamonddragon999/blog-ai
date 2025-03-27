@@ -1,0 +1,133 @@
+---
+// File: src/pages/admin.astro
+---
+
+<html lang="ro">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin - Adaugă Produs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f6f8fa;
+        color: #0f1219;
+        margin: 0;
+        padding: 2rem;
+      }
+      .container {
+        background: #ffffff;
+        border-radius: 12px;
+        max-width: 700px;
+        margin: auto;
+        padding: 2rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      }
+      h1 {
+        text-align: center;
+        color: #2b41fd;
+        margin-bottom: 2rem;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+      }
+      button {
+        background-color: #2b41fd;
+        color: #fff;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      button:hover {
+        background-color: #1e2fcc;
+      }
+      #loading {
+        margin-top: 1.5rem;
+        font-size: 1.1rem;
+      }
+      #result {
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🛒 Adaugă un produs pentru blog</h1>
+      <form id="productForm">
+        <label for="title">Titlu produs:</label>
+        <input type="text" id="title" name="title" required />
+
+        <label for="description">Descriere scurtă:</label>
+        <textarea id="description" name="description" required rows="3"></textarea>
+
+        <label for="link">Link afiliat:</label>
+        <input type="url" id="link" name="link" required />
+
+        <button type="submit">Generează Articol</button>
+      </form>
+
+      <div id="loading" style="display: none;">🔄 Se generează articolul...</div>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById('productForm');
+      const loading = document.getElementById('loading');
+      const result = document.getElementById('result');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loading.style.display = 'block';
+        result.innerHTML = '';
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+          const res = await fetch('https://n8n-self-hosted-7aw5.onrender.com/webhook/71dbea08-ecd3-4ba6-a7b1-ace4ab46ea95', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+
+          const text = await res.text();
+          loading.style.display = 'none';
+
+          if (text.includes("Workflow was started")) {
+            result.innerHTML = `<p style="color: green; font-weight: bold">✅ Articolul este în curs de generare! Te rog revino peste câteva secunde.</p>`;
+          } else {
+            try {
+              const json = JSON.parse(text);
+              if (json.success && json.slug) {
+                result.innerHTML = `<p style="color: green; font-weight: bold">✅ Articol generat! <a href="/blog/${json.slug}" style="color: #2b41fd; text-decoration: underline" target="_blank">Vezi articol</a></p>`;
+              } else {
+                throw new Error(json.message || 'Eroare necunoscută');
+              }
+            } catch (err) {
+              result.innerHTML = `<p style="color: red">❌ Eroare: ${text}</p>`;
+            }
+          }
+        } catch (err) {
+          loading.style.display = 'none';
+          result.innerHTML = `<p style="color: red">❌ Eroare: ${err.message}</p>`;
+        }
+      });
+    </script>
+  </body>
+</html>
